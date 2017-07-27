@@ -26,9 +26,9 @@ canonifyurls = true
   post = "/:year/:month/:slug/"
 
 [taxonomies]
-  tag = "tag"
-  category = "category"
-  archive = "archive"
+  tag = "tags"
+  category = "categories"
+  archive = "archives"
 
 [author]
   name = "董子雄"
