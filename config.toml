@@ -22,6 +22,10 @@ disqusShortname = "tranquilpeak"
 paginate = 5
 canonifyurls = true
 
+# Define categories will create hierarchy between parents: `categories = ["foo", "bar"]` will consider "bar" a sub-category of "foo". 
+# If false it will flat categories.
+  hierarchicalCategories = true
+
 [permalinks]
   post = "/:year/:month/:slug/"
 
@@ -32,7 +36,7 @@ canonifyurls = true
 
 [author]
   name = "董子雄"
-  bio = "**尘世迷途小码农**"
+  bio = "**努力工作 认真生活**"
   job = "尘世迷途小码农"
   location = "中国·帝都"
   # Your Gravatar email. Overwrite `author.picture` everywhere in the blog
@@ -60,6 +64,36 @@ canonifyurls = true
   url = "/categories"
 [[menu.main]]
   weight = 1
+  identifier = "algorithms"
+  name = "算法"
+  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-bookmark\"></i>"
+  url = "/categories/算法"
+[[menu.main]]
+  weight = 1
+  identifier = "techArticle"
+  name = "技术文章"
+  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-bookmark\"></i>"
+  url = "/categories/技术文章"
+[[menu.main]]
+  weight = 1
+  identifier = "readingNotes"
+  name = "读书笔记"
+  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-bookmark\"></i>"
+  url = "/categories/读书笔记"
+[[menu.main]]
+  weight = 1
+  identifier = "thinkingMind"
+  name = "思考感悟"
+  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-bookmark\"></i>"
+  url = "/categories/思考感悟"
+[[menu.main]]
+  weight = 1
+  identifier = "miscThings"
+  name = "随手一写"
+  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-bookmark\"></i>"
+  url = "/categories/随手一写"
+[[menu.main]]
+  weight = 1
   identifier = "tags"
   name = "Tags"
   pre = "<i class=\"sidebar-button-icon fa fa-lg fa-tags\"></i>"
@@ -77,12 +111,12 @@ canonifyurls = true
   pre = "<i class=\"sidebar-button-icon fa fa-lg fa-question\"></i>"
   url = "/#about"
 
-[[menu.links]]
-  weight = -1
-  identifier = "github"
-  name = "GitHub"
-  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-github\"></i>"
-  url = "https://github.com/futureCoder"
+#[[menu.links]]
+  #weight = -1
+  #identifier = "github"
+  #name = "GitHub"
+  #pre = "<i class=\"sidebar-button-icon fa fa-lg fa-github\"></i>"
+  #url = "https://github.com/futureCoder"
 #[[menu.links]]
   #weight = 0
   #identifier = "stackoverflow"
@@ -90,29 +124,25 @@ canonifyurls = true
   #pre = "<i class=\"sidebar-button-icon fa fa-lg fa-stack-overflow\"></i>"
   #url = "https://stackoverflow.com/users/636472/kakawait"
 
-[[menu.misc]]
-  weight = 0
-  identifier = "rss"
-  name = "RSS"
-  pre = "<i class=\"sidebar-button-icon fa fa-lg fa-rss\"></i>"
-  url = "/index.xml"
+#[[menu.misc]]
+  #weight = 0
+  #identifier = "rss"
+  #name = "RSS"
+  #pre = "<i class=\"sidebar-button-icon fa fa-lg fa-rss\"></i>"
+  #url = "/index.xml"
 
 [params]
   # Customize date format use to render blog post date, categories and other
   # You must use date format used by Go Time package https://golang.org/pkg/time/
   # Months (not work with short month like "jan", "feb", etc) are translated if translation exists on i18n folders
   # Default format is: January 2, 2006 
-  dateFormat = "2 January 2006 "
+  dateFormat = "January2日 · 2006年 "
 
   # Global keywords configuration. Following keywords will be add to every pages
   # keywords = ["development", "next-gen"]
 
   # Hide sidebar on all article page to let article take full width to improve reading, and enjoy wide images and cover images. (true: enable, false: disable)
   clearReading = false
-
-  # Define categories will create hierarchy between parents: `categories = ["foo", "bar"]` will consider "bar" a sub-category of "foo". 
-  # If false it will flat categories.
-  hierarchicalCategories = true
 
   description = "JasonDong's Blog"
 
@@ -144,10 +174,12 @@ canonifyurls = true
 
   # Display thumbnail image of each post on index pages (false: disabled, true: enabled)
   thumbnailImage = true
+
   # Display thumbnail image at the right of title in index pages (`right`, `left` or `bottom`)
   # Set this value to `right` if you have old posts to keep the old style on them
   # and define `thumbnailImagePosition` on a post to overwrite this setting
-  thumbnailImagePosition = "right"
+  thumbnailImagePosition = "left"
+
   # Automatically select the cover image or the first photo from the gallery of a post if there is no thumbnail image as the thumbnail image
   # Set this value to `true` if you have old posts that use the cover image or the first photo as the thumbnail image
   # and set `autoThumbnailImage` to `false` on a post to overwrite this setting
