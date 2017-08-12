@@ -1,7 +1,18 @@
 ---
 title: "C++操作Redis实现异步订阅和发布"
 date: 2017-08-11T13:05:21+08:00
-draft: true
+draft: false
+thumbnailImagePosition: left
+thumbnailImage: //otnjj3xqi.bkt.clouddn.com/image/blog/C++%E6%93%8D%E4%BD%9CRedis%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E8%AE%A2%E9%98%85%E5%92%8C%E5%8F%91%E5%B8%83city-750.jpg
+coverImage: //otnjj3xqi.bkt.clouddn.com/image/blog/C++%E6%93%8D%E4%BD%9CRedis%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E8%AE%A2%E9%98%85%E5%92%8C%E5%8F%91%E5%B8%83city.jpg
+metaAlignment: center
+categories:
+- categories
+- techArticle
+tags:
+- C++
+- Redis
+- Linux
 ---
 
 # 安装redis，hiredis库
@@ -72,7 +83,9 @@ sudo ldconfig /usr/local/lib  #ldconfig是一个动态链接库管理命令 将�
 
 ### 3.2 同步相关的API
 
+{{< alert info >}}
 介绍同步的 API 有几个函数很重要：
+{{< /alert >}}
 
 - redisContext \* redisConnect(const char \* ip, int port);
 - void \* redisCommand(redisContext \* c, const char \* format, ...);
