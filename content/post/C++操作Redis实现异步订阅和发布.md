@@ -8,8 +8,8 @@ coverImage: //otnjj3xqi.bkt.clouddn.com/image/blog/C++%E6%93%8D%E4%BD%9CRedis%E5
 metaAlignment: center
 clearReading: true
 categories:
-- categories
-- techArticle
+- 分类
+- 技术文章
 tags:
 - C++
 - Redis
