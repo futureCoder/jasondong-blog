@@ -41,10 +41,10 @@ canonifyurls = true
   job = "尘世迷途小码农"
   location = "中国·帝都"
   # Your Gravatar email. Overwrite `author.picture` everywhere in the blog
-  gravatarEmail = "jasondong1230@gmail.com"
+  # gravatarEmail = "jasondong1230@gmail.com"
   # Your profile picture
   # Overwritten by your gravatar image if `author.gravatarEmail` is filled
-  picture = "http://otnjj3xqi.bkt.clouddn.com/0.jpg"
+  picture = "//otnjj3xqi.bkt.clouddn.com/image/blog/avatarIcon/Bannie.jpg"
   # Your Twitter username without the @. E.g : thibaudlepretre
   # twitter = "thibaudlepretre"
   # Your google plus profile id. E.g : +ThibaudLepretre or 114625208755123718311
