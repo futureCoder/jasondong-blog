@@ -21,6 +21,7 @@ defaultContentLanguage = "zh-cn"
 disqusShortname = "MTAyMC8zMDI3OC82ODMz"
 # googleAnalytics = "UA-123-45"
 paginate = 5
+hasCJKLanguage = true
 canonifyurls = true
 
 # Define categories will create hierarchy between parents: `categories = ["foo", "bar"]` will consider "bar" a sub-category of "foo". 
