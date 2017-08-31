@@ -18,8 +18,8 @@ You may assume the two numbers do not contain any leading zero, except the numbe
 
 #### 思路
 链表没有前导0，所以不需要考虑特殊情况。按位加就好了，纯考代码实现。接口中给出的是两个链表的头结点地址，所以实现上考虑直接在实参对象链表```l1```上进行修改，然后返回```l1```，若```l1```的长度较短,则将```l2```中多出的部分接到```l1```的尾结点上。需要注意，在这么干了之后，```l1```和```l2```会成为带有公共结点的链表，所以代码中额外定义了一个```pre```指针，用来修改这种情况。实际工程可能不推荐这么做或者视情况而定，这里仅是为了减少分配额外空间。
-
-#### AC代码 Version.1
+{{< alert info >}}复杂度：O(n) {{< /alert >}}
+###### AC代码 Version.1
 {{< codeblock "AddTwoNumbers.cpp" >}}
 class Solution {
 public:
@@ -65,9 +65,9 @@ public:
 };
 {{< /codeblock >}}
 
-也可以考虑用二级指针，指向链表节点的地址，可以直接修改指针域，不过也就是少定义了两个变量，但换来的是每次访问链表元素都要“间接寻址”，多一次解引用。
-
-#### AC代码 Version.2
+也可以考虑用二级指针，指向链表节点的地址，可以直接修改指针域，不过也就是少定义了两个变量，但换来的是每次访问链表元素都要“间接寻址”，多一次解引用。<p>
+{{< alert info >}}复杂度：O(n) {{< /alert >}}
+###### AC代码 Version.2
 {{< codeblock "AddTwoNumbers.cpp" >}}
 class Solution {
 public:
