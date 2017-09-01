@@ -1,5 +1,5 @@
 ---
-title: "LeetCode-001-TwoSum解题报告"
+title: "LeetCode-001-Two Sum解题报告"
 date: 2017-08-28T16:33:57+08:00
 clearReading: false
 categories:
