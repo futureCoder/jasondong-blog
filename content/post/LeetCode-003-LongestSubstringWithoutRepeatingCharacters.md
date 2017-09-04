@@ -7,7 +7,8 @@ categories:
 - 算法
 tags:
 - LeetCode
-- LinkedList
+- Greedy
+- Hash
 ---
 
 #### 题目描述
