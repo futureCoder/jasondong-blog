@@ -11,10 +11,10 @@ tags:
 ---
 
 #### 题目描述
-You are given two {{< hl-text cyan >}}non-empty{{< /hl-text >}} linked lists representing two non-negative integers. The digits are stored in reverse order and each of their nodes contain a single digit. Add the two numbers and return it as a linked list.
+> You are given two {{< hl-text cyan >}}non-empty{{< /hl-text >}} linked lists representing two non-negative integers. The digits are stored in reverse order and each of their nodes contain a single digit. Add the two numbers and return it as a linked list.
 You may assume the two numbers do not contain any leading zero, except the number 0 itself.<br>
 **Input**: (2 -> 4 -> 3) + (5 -> 6 -> 4)<br>
-**Output**: 7 -> 0 -> 8
+**Output**: 7 -> 0 -> 8<br>
 
 #### 思路
 链表没有前导0，所以不需要考虑特殊情况。按位加就好了，纯考代码实现。接口中给出的是两个链表的头结点地址，所以实现上考虑直接在实参对象链表```l1```上进行修改，然后返回```l1```，若```l1```的长度较短,则将```l2```中多出的部分接到```l1```的尾结点上。需要注意，在这么干了之后，```l1```和```l2```会成为带有公共结点的链表，所以代码中额外定义了一个```pre```指针，用来修改这种情况。实际工程可能不推荐这么做或者视情况而定，这里仅是为了减少分配额外空间。
