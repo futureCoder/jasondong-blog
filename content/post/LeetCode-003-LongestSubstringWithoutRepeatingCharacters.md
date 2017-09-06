@@ -25,31 +25,28 @@ Note that the answer must be a **substring**, {{< hl-text red >}}"pwke"{{< /hl-t
 {{< alert info >}}复杂度：最好情况下，无重复字符，只需一趟遍历，复杂度为O(n)；最坏情况下，整个字符串只有一种字符，遍历过程中需要不断拉回，但这样每个元素也只访问2次，复杂度还是O(n)；插入map的复杂度为O(log<sub>n</sub>)，最终，时间复杂度为O(log<sub>n</sub>) {{< /alert >}}
 ###### AC代码 Version.1
 {{< codeblock "AddTwoNumbers.cpp" >}}
-class Solution {
-public:
-    int lengthOfLongestSubstring(string s) {
-        int ret = 0, len = 0;
-        std::map<char, int> appearMap;
-        for(int idx = 0; idx < s.length(); ++idx)
+int lengthOfLongestSubstring(string s) {
+    int ret = 0, len = 0;
+    std::map<char, int> appearMap;
+    for(int idx = 0; idx < s.length(); ++idx)
+    {
+        auto iter = appearMap.find(s[idx]);
+        if(iter == appearMap.end())
         {
-            auto iter = appearMap.find(s[idx]);
-            if(iter == appearMap.end())
-            {
-                //has not appear
-                ++len;
-                appearMap.insert(std::make_pair(s[idx], idx));
-            }
-            else
-            {
-                idx = iter->second;
-                appearMap.clear();
-                len = 0;
-            }
-            ret = std::max(ret, len);
+            //has not appear
+            ++len;
+            appearMap.insert(std::make_pair(s[idx], idx));
         }
-        return ret;
+        else
+        {
+            idx = iter->second;
+            appearMap.clear();
+            len = 0;
+        }
+        ret = std::max(ret, len);
     }
-};
+    return ret;
+}
 {{< /codeblock >}}
 
 #### 更进一步
@@ -57,25 +54,22 @@ public:
 {{< alert info >}}复杂度：由于没有map操作，时间复杂度为O(n)，空间复杂度O(1)，只开了一个固定大小的数组，一般情况下影响不大。{{< /alert >}}
 ###### AC代码 Version.2
 {{< codeblock "AddTwoNumbers.cpp" >}}
-class Solution {
-public:
-    int lengthOfLongestSubstring(string s) {
-        int alphabet[256];
-        memset(alphabet, -1, sizeof(alphabet));
-        int index = -1, ret = 0;
-        for(int i = 0; i < s.size(); ++i)
+int lengthOfLongestSubstring(string s) {
+    int alphabet[256];
+    memset(alphabet, -1, sizeof(alphabet));
+    int index = -1, ret = 0;
+    for(int i = 0; i < s.size(); ++i)
+    {
+        if(alphabet[s[i]] > index)
         {
-        	if(alphabet[s[i]] > index)
-        	{
-        		index = alphabet[s[i]];
-        	}
-        	if(ret < i - index)
-        	{
-        		ret = i - index;
-        	}
-        	alphabet[s[i]] = i;
+            index = alphabet[s[i]];
         }
-        return ret;
+        if(ret < i - index)
+        {
+            ret = i - index;
+        }
+        alphabet[s[i]] = i;
     }
-};
+    return ret;
+}
 {{< /codeblock >}}
