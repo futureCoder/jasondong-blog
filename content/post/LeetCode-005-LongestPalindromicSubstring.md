@@ -30,7 +30,7 @@ Output: "bb"
 Manacher(马拉车)算法，详细后续更新，先上代码。
 
 ###### AC代码 Version.1 非常乱 凑合看
-{{< codeblock "AddTwoNumbers.cpp" >}}
+{{< codeblock "longestPalindrome.cpp" >}}
 string longestPalindrome(string s) {
     if (s.size() < 2)
         return s;
