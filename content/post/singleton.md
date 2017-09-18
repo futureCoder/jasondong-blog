@@ -34,7 +34,23 @@ public:
 一目了然，懒汉方式是用到时候才创建类，代码简单但却存在严重问题。当多个线程并行执行```InstancePtr```时，若线程1和线程2同时执行到了```if (nullptr == m_ptr)```,那么便会创建多个该类的实例，违反了该类为单例类的原则。
 
 #####饿汉方式 指全局的单例实例在类装载时构建，线程安全
-
+{{< codeblock "饿汉方式" >}}
+template<class T>
+public class Singleton
+{
+private:
+	static T* m_ptr;
+	Singleton(){}
+public:
+	static inline T& Instance(){return *InstancePtr();}
+	static inline T* InstancePtr()
+	{
+		return m_ptr;
+	}
+}
+template<class T>
+T* Singleton<T>::m_ptr = new T();
+{{< /codeblock >}}
 
 {{< codeblock "Singleton.h" >}}
 #include <stdlib.h>
