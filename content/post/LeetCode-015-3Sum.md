@@ -20,10 +20,10 @@ A solution set is:
 ]```
 
 #### 思路
-
+两侧夹逼，迭代过程中注意去重。
 
 ###### AC代码
-{{< codeblock "longestPalindrome.cpp" >}}
+{{< codeblock "3Sum.cpp" >}}
 vector<vector<int>> threeSum(vector<int>& nums) {
     vector<vector<int>> ret;
     if (nums.size() < 3)
