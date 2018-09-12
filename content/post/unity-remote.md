@@ -1,8 +1,8 @@
 ---
 title: "使用UnityRemote进行远程调试"
 date: 2018-05-17T17:47:02+08:00  
-draft: true  
-clearReading: true  
+draft: false  
+clearReading: false  
 categories:
 - 分类
 - 技术文章
