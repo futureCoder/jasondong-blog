@@ -10,6 +10,7 @@ clearReading: true
 categories:
 - 分类
 - 技术文章
+- 读书笔记
 tags:
 - C++
 ---
