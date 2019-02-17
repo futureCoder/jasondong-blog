@@ -18,7 +18,17 @@ public class Duck
     abstract display();
 }
 ```
-如果现在我们想让鸭子能飞
+如果现在我们想让鸭子能飞，那么一个自然的思路就是给Duck基类中加上fly()方法，成为下边这样
+```
+public class Duck
+{
+    quack();
+    swim();
+    abstract display();
+    fly();      //新加的
+}
+```
+
 ## 第二章 有意义的命名
 1. 名副其实。
    * 选个好名字要花时间，但省下来的时间比花掉的多。
