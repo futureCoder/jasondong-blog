@@ -1,7 +1,7 @@
 ---
 title: "使用Unity3d中的CharacterController进行碰撞检测"
 date: 2018-04-24T09:33:53+08:00
-draft: false
+draft: true
 ---
 
 CharacterController角色控制器用于第一或第三人称主角控制，不实用刚体物理效果。继承自Collider，不受力的影响，通过调用Move函数进行移动，但是受制于碰撞。

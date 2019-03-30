@@ -2,6 +2,7 @@
 title: "Linux系统下常用软件及配置"
 date: 2017-12-26T23:26:51+08:00
 hierarchicalCategories: true
+draft: true
 categories: 
 - 分类
 - 随手一写

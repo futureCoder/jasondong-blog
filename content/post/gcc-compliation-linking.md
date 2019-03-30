@@ -2,6 +2,7 @@
 title: "gcc/g++等编译器 编译原理： 预处理，编译，汇编，链接各步骤详解"
 date: 2017-12-26T08:39:18+08:00
 hierarchicalCategories: true
+draft: true
 categories: 
 - 分类
 - 随手一写
