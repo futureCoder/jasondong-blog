@@ -255,5 +255,3 @@ CIOCPServer::ThreadPoolFunc(LPVOID thisContext)
 3. 监听线程通过FD_ACCEPT事件标志位来监听新的客户端连接请求, 将新连接的socket绑定到IO完成端口, 并将接收客户端网络数据的任务交给IO完成端口进行(PostRecv);
 4. IO完成端口会产生事件并携带事件类型(IOType)与数据(ClientContext), 工作线程处理监听IO完成端口并根据事件类型选择不同逻辑进行处理;
 5. 工作线程持有CIOCPServer*, CIOCPServer持有主窗口MainFrame的刷新UI回调, 工作线程为CIOCPServer*的执行不同逻辑来刷新UI.  
-
-个人能力和时间关系, 很多分析也不一定对, 希望群主斧正. 目前对IO完成端口的机制和处理细节还没有详细看, 所以需要这些前置知识的`OnClientWriting`和`OnClientReading`的分析还没有进行. 客户端的分析也还没有进行. 代码还会继续看, 后续也会逐渐补上缺失的部分. 后续还会多麻烦老师.
