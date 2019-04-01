@@ -181,9 +181,9 @@ CIOCPServer::ThreadPoolFunc(LPVOID thisContext)
 
         pOverlapPlus = CONTAINING_RECORD(lpOverlapped, OVERLAPPEDPLUS, m_ol);   //由IO完成端口返回的LPOVERLAPPED地址来计算出存储该变量的OVERLAPPEDPLUS的地址, OVERLAPPEDPLUS存储着客户端操作类型.
 
-        if (!bIORet && dwIOError != WAIT_TIMEOUT)   //错误处理, 关掉相应连接
+        if (!bIORet && dwIOError != WAIT_TIMEOUT)   //不是等待超时则视为错误, 关掉相应连接
         {
-            if (lpClientContext && pThis->m_bTimeToKill == false)
+            if (lpClientContext && pThis->m_bTimeToKill == false)   //m_bTimeToKill就不用单独关闭了, 会统一关闭.
             {
                 pThis->RemoveStaleClient(lpClientContext, FALSE);
             }
@@ -238,3 +238,6 @@ CIOCPServer::ThreadPoolFunc(LPVOID thisContext)
 总结一下, ThreadPoolFunc虽然看起来代码很多, 但核心代码很少, 主要逻辑就是:
 1. 等待IO完成端口发来事件;
 2. 取得事件类型, 并调用相应逻辑处理.
+
+总结一下整个逻辑:
+1. 窗口启动后, 用CIOCPServer的Initialize方法
