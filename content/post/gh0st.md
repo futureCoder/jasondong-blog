@@ -1,3 +1,13 @@
+---
+title: "gh0st源码分析"
+date: 2019-03-30T21:04:41+08:00
+hierarchicalCategories: true
+draft: false
+categories: 
+- 分类
+- 技术文章
+---
+
 Server端:
 `CIniFile`读取配置文件, `CGh0stApp`在其重载的`InitInstance()`中, 调用主窗口`CMainFrame`的`Activate(UINT nPort, UINT nMaxConnections)`函数并将`CIniFile`中的配置传入.  
 ```
@@ -85,7 +95,7 @@ while(1)
 {
 1    if (WaitForSingleObject(pThis->m_hKillEvent, 100) == WAIT_OBJECT_0)     //若在100ms内等到了Stop()函数设置的m_hKillEvent事件,则线程退出,Stop等待此线程退出后继续进行清理操作. **这里不懂为什么要用event而不是成员变量来控制while的条件.**
 2            break;
-3    WSAWaitForMultipleEvents(1, &pThis->m_hEvent, FALSE, 100, FALSE);       //若在100ms内等pThis->m_hEvent的任何信号, 根据是否有信号来选择下一步操作.
+3    WSAWaitForMultipleEvents(1, &pThis->m_hEvent, FALSE, 100, FALSE);       //若在100ms内等pThis->m_hEvent的任何信号, 超时则继续循环, 若有信号则进行下一步操作.
 4    WSAEnumNetworkEvents(pThis->m_socListen, pThis->m_hEvent, &events);     //为m_socListen查看已经发生的网络事件, 放到events里, 并清掉pThis->m_hEvent的事件.
 5    if (events.lNetworkEvents & FD_ACCEPT)                                  //如果有客户端连接事件发生
 6            if (events.iErrorCode[FD_ACCEPT_BIT] == 0)                      //并且对应位没有报告错误
@@ -239,5 +249,9 @@ CIOCPServer::ThreadPoolFunc(LPVOID thisContext)
 1. 等待IO完成端口发来事件;
 2. 取得事件类型, 并调用相应逻辑处理.
 
-总结一下整个逻辑:
-1. 窗口启动后, 用CIOCPServer的Initialize方法
+总结一下:
+1. 主窗口MainFrame初始化CIOCPServer;
+2. CIOCPServer创建监听线程与工作线程;
+3. 监听线程通过FD_ACCEPT事件标志位来监听新的客户端连接请求, 将新连接的socket绑定到IO完成端口, 并将接收客户端网络数据的任务交给IO完成端口进行(PostRecv);
+4. IO完成端口会产生事件并携带事件类型(IOType)与数据(ClientContext), 工作线程处理监听IO完成端口并根据事件类型选择不同逻辑进行处理;
+5. 工作线程持有CIOCPServer*, CIOCPServer持有主窗口MainFrame的刷新UI回调, 工作线程为CIOCPServer*的执行不同逻辑来刷新UI.  

@@ -2,6 +2,7 @@
 title: "开篇"
 date: 2017-08-09T23:04:39+08:00
 hierarchicalCategories: true
+draft: true
 categories: 
 - 分类
 - 随手一写
