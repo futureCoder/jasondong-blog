@@ -1,5 +1,5 @@
 ---
-title: "gh0st源码分析"
+title: "gh0st源码分析-1"
 date: 2019-03-30T21:04:41+08:00
 hierarchicalCategories: true
 draft: false
@@ -8,7 +8,7 @@ categories:
 - 技术文章
 ---
 
-Server端:
+Server端结构:
 `CIniFile`读取配置文件, `CGh0stApp`在其重载的`InitInstance()`中, 调用主窗口`CMainFrame`的`Activate(UINT nPort, UINT nMaxConnections)`函数并将`CIniFile`中的配置传入.  
 ```
 CMainFrame::Activate(UINT nPort, UINT nMaxConnections)  //nPort-端口, nMaxConnections-最大连接数
