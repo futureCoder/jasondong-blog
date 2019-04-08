@@ -74,7 +74,7 @@ protected:
 ```
 bool CIOCPServer::OnClientReading(ClientContext* pContext, DWORD dwIoSize)
 {
-	CLock cs(CIOCPServer::m_cs, "OnClientReading");		//CLock构造函数加锁, 析构解锁
+	CLock cs(CIOCPServer::m_cs, "OnClientReading");		//CLock构造函数加锁, 析构解锁, 用RAII技术把CriticalSection封了一下. 但是这个锁的粒度是不是太大了...
 	try
 	{
 		static DWORD nLastTick = GetTickCount();	//注意:
@@ -112,22 +112,25 @@ void CIOCPServer::Send(ClientContext* pContext, LPBYTE lpData, UINT nSize)
 	{
 		unsigned long	destLen = (double)nSize * 1.001 + 12;	//新版本的zlib应该是用compressBound计算出
 		LPBYTE			pDest = new BYTE[destLen];				
-		int	nRet = compress(pDest, &destLen, lpData, nSize);	//压缩待发送数据
+		int	nRet = compress(pDest, &destLen, lpData, nSize);	//将待发送数据压缩并存到pDest中
 		if (nRet != Z_OK)
 		{
 			delete[] pDest;
 			return;
 		}
-		LONG nBufLen = destLen + HDR_SIZE;
-		// 5 bytes packet flag
-		pContext->m_WriteBuffer.Write(m_bPacketFlag, sizeof(m_bPacketFlag));
-		// 4 byte header [Size of Entire Packet]
-		pContext->m_WriteBuffer.Write((PBYTE)&nBufLen, sizeof(nBufLen));
-		// 4 byte header [Size of UnCompress Entire Packet]
-		pContext->m_WriteBuffer.Write((PBYTE)&nSize, sizeof(nSize));
+		{
+			//构造包头描述
+			LONG nBufLen = destLen + HDR_SIZE;
+			// 5 bytes packet flag
+			pContext->m_WriteBuffer.Write(m_bPacketFlag, sizeof(m_bPacketFlag));
+			// 4 byte header [Size of Entire Packet]
+			pContext->m_WriteBuffer.Write((PBYTE)&nBufLen, sizeof(nBufLen));
+			// 4 byte header [Size of UnCompress Entire Packet]
+			pContext->m_WriteBuffer.Write((PBYTE)&nSize, sizeof(nSize));
+		}
 		// Write Data
-		pContext->m_WriteBuffer.Write(pDest, destLen);
-		delete[] pDest;		//归还用来存储压缩数据的临时堆空间
+		pContext->m_WriteBuffer.Write(pDest, destLen);		//实际传输的数据
+		delete[] pDest;			//归还用来存储压缩数据的临时堆空间
 
 		// 发送完后，再备份数据, 因为有可能是m_ResendWriteBuffer本身在发送,所以不直接写入
 		// 否则在m_ResendWriteBuffer.ClearBuffer()之后, lpData将变为悬空指针
@@ -137,14 +140,16 @@ void CIOCPServer::Send(ClientContext* pContext, LPBYTE lpData, UINT nSize)
 		pContext->m_ResendWriteBuffer.Write(lpResendWriteBuffer, nSize);	// 备份发送的数据
 		delete[] lpResendWriteBuffer;
 	}
-	else
+	else	//只在CIOCPServer::OnClientReading捕获异常时, nSize == 0
 	{
 		pContext->m_WriteBuffer.Write(m_bPacketFlag, sizeof(m_bPacketFlag));
 		pContext->m_ResendWriteBuffer.ClearBuffer();
 		pContext->m_ResendWriteBuffer.Write(m_bPacketFlag, sizeof(m_bPacketFlag));
 	}
 
-	WaitForSingleObject(pContext->m_hWriteComplete, INFINITE);	//无限等待m_hWriteComplete事件发生
+	WaitForSingleObject(pContext->m_hWriteComplete, INFINITE);	//无限等待m_hWriteComplete事件发生, 该事件再CIOCPServer::OnClientWriting被设置
 
+	OVERLAPPEDPLUS * pOverlap = new OVERLAPPEDPLUS(IOWrite);		
+	PostQueuedCompletionStatus(m_hCompletionPort, 0, (DWORD)pContext, &pOverlap->m_ol);	
 }
 ```
