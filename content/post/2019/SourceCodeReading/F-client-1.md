@@ -36,21 +36,18 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
     long tmSend = 3 * 1000L;
     long tmRecv = 3 * 1000L;
     long noDelay = 1;
-    setsockopt(m_hSocket, IPPROTO_TCP, TCP_NODELAY, (LPSTR)&noDelay, sizeof(long)); //禁用Nagle算法,立即发送
+    setsockopt(m_hSocket, IPPROTO_TCP, TCP_NODELAY, (LPSTR)&noDelay, sizeof(long)); //禁用Nagle算法, 立即发送
     setsockopt(m_hSocket, SOL_SOCKET, SO_SNDTIMEO, (LPSTR)&tmSend, sizeof(long));   //设发送超时时间
     setsockopt(m_hSocket, SOL_SOCKET, SO_RCVTIMEO, (LPSTR)&tmRecv, sizeof(long));   //设接收超时时间
-    
     unsigned long on = 1;
     if (::ioctlsocket(m_hSocket, FIONBIO, &on) == SOCKET_ERROR) //将socket设置成非阻塞的
         return false;
-
     struct sockaddr_in addrSrv = { 0 };
     struct hostent* pHostent = NULL;
     unsigned int addr = 0;
-
-    if ((addrSrv.sin_addr.s_addr = inet_addr(m_strServer.c_str())) == INADDR_NONE)
+    if ((addrSrv.sin_addr.s_addr = inet_addr(m_strServer.c_str())) == INADDR_NONE)  //是否是点分十进制
     {
-        pHostent = ::gethostbyname(m_strServer.c_str());
+        pHostent = ::gethostbyname(m_strServer.c_str());    //不是点分十进制就按域名处理
         if (!pHostent)
         {
             LOG_ERROR("Could not connect server:%s, port:%d.", m_strServer.c_str(), m_nPort);
@@ -62,7 +59,7 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
 
     addrSrv.sin_family = AF_INET;
     addrSrv.sin_port = htons((u_short)m_nPort);
-    int ret = ::connect(m_hSocket, (struct sockaddr*)&addrSrv, sizeof(addrSrv));
+    int ret = ::connect(m_hSocket, (struct sockaddr*)&addrSrv, sizeof(addrSrv));    //连接服务器, 非阻塞
     if (ret == 0)
     {
         LOG_INFO("Connect to server:%s, port:%d successfully.", m_strServer.c_str(), m_nPort);
@@ -80,7 +77,7 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
     FD_SET(m_hSocket, &writeset);
     struct timeval tv = { timeout, 0 };
     if (::select(m_hSocket + 1, NULL, &writeset, NULL, &tv) != 1)
-    {
+    {   //超时和其他错误处理
         LOG_ERROR("Could not connect to server:%s, port:%d.", m_strServer.c_str(), m_nPort);
         return false;
     }
@@ -90,7 +87,7 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
     return true;
 }
 ```
-
+CIUSocket::Connect只做一件事就是连接chatserver, 上来先创建socket并将其设置为非阻塞模式, 禁用Nagle算法并设置收/发超时时间为3s, 
 
 CIUSocket::1139L
 
