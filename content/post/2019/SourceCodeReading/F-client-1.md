@@ -8,6 +8,10 @@ categories:
 - 技术文章
 ---
 
+
+CFlamingoClient持有
+
+
 CIUSocket
 CIUSocket::Init()
 
@@ -92,7 +96,7 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
 ```
 
 
-CIUSocket::1139L
+主线程中 CMainDlg::OnLoginResult() 初始化CFlamingoClient中所有的网络线程InitNetThreads(), 之后调用CFlamingoClient::GetFriendList()向消息发送线程m_SendMsgThread加入一条待发送数据, ~~并开启CCheckNetworkStatusTask线程, CCheckNetworkStatusTask在线程函数中每3秒检测一次网络状态并将状态由FMG_MSG_NETWORK_STATUS_CHANGE事件抛出, ~~
 
 ```
 
