@@ -95,6 +95,54 @@ CIUSocket::Connect只做一件事就是连接chatserver, 上来先创建socket�
 
 主线程中 CMainDlg::OnLoginResult() 初始化CFlamingoClient中所有的网络线程InitNetThreads(), 之后调用CFlamingoClient::GetFriendList()向消息发送线程m_SendMsgThread加入一条待发送数据, ~~并开启CCheckNetworkStatusTask线程, CCheckNetworkStatusTask在线程函数中每3秒检测一次网络状态并将状态由FMG_MSG_NETWORK_STATUS_CHANGE事件抛出, ~~
 
+看一下网络线程的初始化部分
 ```
+bool CFlamingoClient::InitNetThreads()
+{
+    CIUSocket::GetInstance().SetRecvMsgThread(&m_RecvMsgThread);    //
+    CIUSocket::GetInstance().Init();
 
+    m_SendMsgThread.Start();
+    m_RecvMsgThread.Start();
+
+    m_SendMsgThread.m_lpFMGClient = this;
+
+    m_FileTask.Start();
+    m_ImageTask.Start();
+
+    //CSendFileThread::GetInstance().AttachSocketClient(&m_SocketClient);
+    //CSendFileThread::GetInstance().Start();
+    return true;
+}
+```
+在Init之前先设置了RecvMsgThread, 为什么呢? 
+
+CFlamingoClient 算作业务逻辑层, 里面有四个线程:
+1. 
+
+
+CIUSocket 作为网络通信层, 其中有两个线程:
+1. m_spSendThread 数据发送线程, 线程函数 CIUSocket::SendThreadProc
+2. m_spRecvThread 数据接收线程, 线程函数 CIUSocket::RecvThreadProc
+首先看数据发送线程的逻辑:
+```
+CIUSocket::SendThreadProc()
+{
+    while (!m_bStop)    //m_bStop在CIUSocket::Uninit()置为true, Uninit调用时机为: 1. 网络连接断开; 2. 直界面执行OnDestroy, FMGClient进行清理时调用; 3. 
+    {
+        std::unique_lock<std::mutex> guard(m_mtSendBuf);
+        while (m_strSendBuf.empty())
+        {
+            if (m_bStop)
+                return;
+
+            m_cvSendBuf.wait(guard);
+        }
+
+        if (!Send())
+        {
+            //进行重连，如果连接不上，则向客户报告错误
+        }
+    }
+}
 ```
