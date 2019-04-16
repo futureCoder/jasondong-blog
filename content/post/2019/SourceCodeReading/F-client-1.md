@@ -314,23 +314,23 @@ bool CIUSocket::DecodePackages()    //解包,
                 break;
 
             //-- 去除包头信息
-            m_strRecvBuf.erase(0, sizeof(msg)); //清掉包头
+            m_strRecvBuf.erase(0, sizeof(msg));             //清掉包头
             //-- 拿到包体
             std::string strBody;
-            strBody.append(m_strRecvBuf.c_str(), header.compresssize);  //拿出整个包体
+            strBody.append(m_strRecvBuf.c_str(), header.compresssize);      //拿出整个包体
             //-- 去除包体信息
-            m_strRecvBuf.erase(0, header.compresssize); //清掉包体
+            m_strRecvBuf.erase(0, header.compresssize);     //清掉包体
 
             //-- 解压
             std::string strUncompressBody;
             if (!ZlibUtil::UncompressBuf(strBody, strUncompressBody, header.originsize))
             {
                 LOG_ERROR("uncompress buf error, compresssize: %d, originsize: %d", header.compresssize, header.originsize);
-                m_strRecvBuf.clear();
+                m_strRecvBuf.clear();       //解压发生错误, 清掉所有已收数据.  这里有疑问. 难道这不会破坏正常包么??
                 return false;
             }
 
-            m_pRecvMsgThread->AddMsgData(strUncompressBody);
+            m_pRecvMsgThread->AddMsgData(strUncompressBody);        //调用另一个线程对象的接口, 向该线程放入数据
         }
         //-- 数据未压缩过
         else
@@ -339,12 +339,12 @@ bool CIUSocket::DecodePackages()    //解包,
             if (header.originsize >= MAX_PACKAGE_SIZE || header.originsize <= 0)
             {
                 LOG_ERROR("Recv a illegal package, originsize=%d.", header.originsize);
-                m_strRecvBuf.clear();
+                m_strRecvBuf.clear();       //非法数据包直接清掉, 
                 return false;
             }
 
             //-- 接收缓冲区不够一个整包大小（包头+包体）
-            if (m_strRecvBuf.length() < sizeof(msg) + header.originsize)
+            if (m_strRecvBuf.length() < sizeof(msg) + header.originsize)        //还没收全, 继续收.
                 break;
 
             //-- 去除包头信息
@@ -354,10 +354,12 @@ bool CIUSocket::DecodePackages()    //解包,
             strBody.append(m_strRecvBuf.c_str(), header.originsize);
             //-- 去除包体信息
             m_strRecvBuf.erase(0, header.originsize);
-            m_pRecvMsgThread->AddMsgData(strBody);
+            m_pRecvMsgThread->AddMsgData(strBody);                  //调用另一个线程对象的接口, 向该线程放入数据
         }
     }// end while
-
     return true;
 }
  ```
+
+ 总结一下这两个线程:
+ 1.网络数据发送线程: m_spSendThread, 线程函数是CIUSocket::SendThreadProc, 作用是将其他模块或线程投递过来的数据正确进行发送.
