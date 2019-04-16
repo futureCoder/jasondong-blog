@@ -198,7 +198,7 @@ bool CIUSocket::Send()
 
  那么生产者是谁呢, 搜索发现只有CIUSocket::Send(const std::string& strBuffer)向m_cvSendBuf中添加数据, 那么该函数是唯一的生产接口, 该接口的调用者就是生产者. 查找发现有两个生产者: 1. 线程函数CIUSocket::RecvThreadProc(); 2. 线程函数CSendMsgThread::Run(). 接下来看一下这两个线程的逻辑.
  ```
- void CIUSocket::RecvThreadProc()
+ void CIUSocket::RecvThreadProc()   //接收数据包线程函数
  {
     int nRet;
     //上网方式 
@@ -234,21 +234,130 @@ bool CIUSocket::Send()
 
             if (m_nHeartbeatInterval > 0)
             {
-                if (time(NULL) - nLastDataTime >= m_nHeartbeatInterval)
-                    SendHeartbeatPackage();
+                if (time(NULL) - nLastDataTime >= m_nHeartbeatInterval)     //一段时间内都没收到数据就发个心跳包
+                    SendHeartbeatPackage();     //发送心跳包, 正是这个函数中调用了CIUSocket::Send(const std::string& strBuffer)向m_cvSendBuf中生产数据
             }
         }
-        //有数据
+        //-- 有数据
         else if (nRet == 1)
         {
-            if (!Recv())
+            if (!Recv())    //接收数据, 下面分析
             {
                 m_pRecvMsgThread->NotifyNetError();
                 continue;
             }
 
-            DecodePackages();
+            DecodePackages();   //解包
         }// end if
     }// end while-loop
  }
+
+bool CIUSocket::Recv()  
+{
+    int nRet = 0;
+    char buff[10 * 1024];
+    while (true)
+    {
+        nRet = ::recv(m_hSocket, buff, 10 * 1024, 0);
+        if (nRet == SOCKET_ERROR)				//-- 一旦出现错误就立刻关闭Socket
+        {
+            if (::WSAGetLastError() == WSAEWOULDBLOCK)
+                break;
+            else
+            {
+                LOG_ERROR("Recv data error, errorNO=%d.", ::WSAGetLastError());
+                //Close();
+                return false;
+            }
+        }
+        else if (nRet < 1)
+        {
+            LOG_ERROR("Recv data error, errorNO=%d.", ::WSAGetLastError());
+            //Close();
+            return false;
+        }
+        m_strRecvBuf.append(buff, nRet);        //注意: m_strRecvBuf 的访问没有加任何保护, 说明Recv只能被单个线程调用. 而它的调用者RecvThreadProc也没有任何加保护的地方, 加之这里只生产数据而并不消费, 可以断定消费m_strRecvBuf的也是RecvThreadProc线程并且生产和消费一定是有关联关系的两个操作节点.
+        ::Sleep(1);
+    }
+    {
+        std::lock_guard<std::mutex> guard(m_mutexLastDataTime);
+        m_nLastDataTime = (long)time(NULL);
+    }
+    return true;
+}
+bool CIUSocket::DecodePackages()    //解包, 
+{
+    //-- 一定要放在一个循环里面解包，因为可能一片数据中有多个包，
+    //-- 对于数据收不全，这个地方我纠结了好久T_T
+    while (true)
+    {
+        //-- 接收缓冲区不够一个包头大小
+        if (m_strRecvBuf.length() <= sizeof(msg))
+            break;
+
+        msg header;
+        memcpy_s(&header, sizeof(msg), m_strRecvBuf.data(), sizeof(msg));
+        //数据压缩过
+        if (header.compressflag == PACKAGE_COMPRESSED)
+        {
+            //防止包头定义的数据是一些错乱的数据，这里最大限制每个包大小为10M
+            if (header.compresssize >= MAX_PACKAGE_SIZE || header.compresssize <= 0 ||
+                header.originsize >= MAX_PACKAGE_SIZE || header.originsize <= 0)
+            {
+                LOG_ERROR("Recv a illegal package, compresssize: %d, originsize=%d.", header.compresssize, header.originsize);
+                m_strRecvBuf.clear();   //非法数据包直接清掉, 
+                return false;
+            }
+
+            //-- 接收缓冲区不够一个整包大小（包头+包体）
+            if (m_strRecvBuf.length() < sizeof(msg) + header.compresssize)  //还没收全, 继续收.
+                break;
+
+            //-- 去除包头信息
+            m_strRecvBuf.erase(0, sizeof(msg)); //清掉包头
+            //-- 拿到包体
+            std::string strBody;
+            strBody.append(m_strRecvBuf.c_str(), header.compresssize);  //拿出整个包体
+            //-- 去除包体信息
+            m_strRecvBuf.erase(0, header.compresssize); //清掉包体
+
+            //-- 解压
+            std::string strUncompressBody;
+            if (!ZlibUtil::UncompressBuf(strBody, strUncompressBody, header.originsize))
+            {
+                LOG_ERROR("uncompress buf error, compresssize: %d, originsize: %d", header.compresssize, header.originsize);
+                m_strRecvBuf.clear();
+                return false;
+            }
+
+            m_pRecvMsgThread->AddMsgData(strUncompressBody);
+        }
+        //-- 数据未压缩过
+        else
+        {
+            //-- 防止包头定义的数据是一些错乱的数据，这里最大限制每个包大小为10M
+            if (header.originsize >= MAX_PACKAGE_SIZE || header.originsize <= 0)
+            {
+                LOG_ERROR("Recv a illegal package, originsize=%d.", header.originsize);
+                m_strRecvBuf.clear();
+                return false;
+            }
+
+            //-- 接收缓冲区不够一个整包大小（包头+包体）
+            if (m_strRecvBuf.length() < sizeof(msg) + header.originsize)
+                break;
+
+            //-- 去除包头信息
+            m_strRecvBuf.erase(0, sizeof(msg));
+            //-- 拿到包体
+            std::string strBody;
+            strBody.append(m_strRecvBuf.c_str(), header.originsize);
+            //-- 去除包体信息
+            m_strRecvBuf.erase(0, header.originsize);
+            m_pRecvMsgThread->AddMsgData(strBody);
+        }
+    }// end while
+
+    return true;
+}
  ```
