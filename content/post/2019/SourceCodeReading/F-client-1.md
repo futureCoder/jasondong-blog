@@ -85,9 +85,7 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
         LOG_ERROR("Could not connect to server:%s, port:%d.", m_strServer.c_str(), m_nPort);
         return false;
     }
-
     m_bConnected = true;
-
     return true;
 }
 ```
@@ -115,10 +113,13 @@ bool CFlamingoClient::InitNetThreads()
     return true;
 }
 ```
-在Init之前先设置了RecvMsgThread, 为什么呢? 
+有个疑问, 在Init之前先设置了RecvMsgThread, 为什么呢? 暂且先不管, 一会儿再看.
 
-CFlamingoClient 算作业务逻辑层, 里面有四个线程:
-1. 
+大概过一下CFlamingoClient的定义, 可以看到这是一个单例类, 并且从名字可以推测这是封装客户端逻辑操作的(因为UI逻辑封装在了CMainDlg中), 算作业务逻辑层, 里面有四个线程:
+1. CSendMsgThread m_SendMsgThread
+2. CRecvMsgThread m_RecvMsgThread
+3. CFileTaskThread m_FileTask
+4. CImageTaskThread m_ImageTask
 
 
 CIUSocket 作为网络通信层, 其中有两个线程:
@@ -192,11 +193,12 @@ bool CIUSocket::Send()
     }
     return true;
 }
-
 ```
 注意, CIUSocket::Send()本身是非线程安全的, 对m_strSendBuf的访问并没有做互斥, 如果在多线程中调用该函数, 线程安全由调用者来保证. 查看一下Send()的引用发现也确实是这么做的, 在工程中只有CIUSocket::SendThreadProc()内会调用Send(), 而SendThreadProc()在线程函数内对m_strSendBuf的访问加了锁, 锁的作用域是整个线程函数循环体. 这里推测一下, 因为Send()本身是非线程安全, 若是有意设计, 那么这个函数的设计目的就是为了某个特定线程封装操作逻辑接口, 这个特定线程就是CIUSocket::SendThreadProc(), 该线程是m_cvSendBuf唯一的消费者. CIUSocket::SendThreadProc()函数体在上面做了简单分析, 逻辑很简单: 查看是否可消费, 如果可以的话就调用Send()进行消费并一次消费干净(过程中消费对象会上锁, 生产者将无法将产品(待消费对象)放入); 如果不可消费则阻塞在条件变量上, 等待生产者唤醒. 这里消费对象就是m_cvSendBuf中的数据. 
 
- 那么生产者是谁呢, 搜索发现只有CIUSocket::Send(const std::string& strBuffer)向m_cvSendBuf中添加数据, 那么该函数是唯一的生产接口, 该接口的调用者就是生产者. 查找发现有两个生产者: 1. 线程函数CIUSocket::RecvThreadProc(); 2. 线程函数CSendMsgThread::Run(). 接下来看一下这两个线程的逻辑.
+ 那么生产者是谁呢, 搜索发现只有CIUSocket::Send(const std::string& strBuffer)向m_cvSendBuf中添加数据, 那么该函数是唯一的生产接口, 该接口的调用者就是生产者. 查找发现有两个生产者: 
+ 1. 线程函数CIUSocket::RecvThreadProc(); 
+ 2. 线程函数CSendMsgThread::Run(). 接下来看一下这两个线程的逻辑.
  ```
  void CIUSocket::RecvThreadProc()   //接收数据包线程函数
  {
@@ -359,7 +361,9 @@ bool CIUSocket::DecodePackages()    //解包,
     }// end while
     return true;
 }
- ```
+```
 
  总结一下这两个线程:
- 1.网络数据发送线程: m_spSendThread, 线程函数是CIUSocket::SendThreadProc, 作用是将其他模块或线程投递过来的数据正确进行发送.
+ 1. 网络数据发送线程: m_spSendThread, 线程函数是CIUSocket::SendThreadProc, 职责是将其他模块或线程投递过来的数据正确进行发送. m_spSendThread是m_cvSendBuf唯一的消费者, m_spRecvThread 和 m_SendMsgThread 是m_cvSendBuf唯二的生产者, 二者调用同一个投送数据的接口, 数据投送完毕后通过条件变量通知m_spSendThread. m_spRecvThread 投送的是心跳包, m_SendMsgThread投送的是经由HandleItem(CNetData* pNetData)工厂生产包装后的协议数据.
+ 2. 网络数据接收线程: m_spRecvThread, 线程函数是CIUSocket::RecvThreadProc, 职责是按包(协议)确定数据边界, 读取socket接收的数据并进行解包, 最后将包体数据经由CRecvMsgThread::AddMsgData(const std::string& pMsgData)投送到 m_pRecvMsgThread 线程并通过条件变量通知m_pRecvMsgThread进行消费. 
+再谈一下这块儿的设计, CUISocket作为一个单例类可以在全局使用, 数据发送线程m_spSendThread 和 数据接收线程m_spRecvThread 同属CIUSocket类, 在这一层保证网络数据的正确发送与接收: 将其他模块投送过来的协议包进行压缩并发送, 将socket收到的网络数据进行解压并转成协议包.
