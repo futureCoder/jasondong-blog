@@ -115,12 +115,68 @@ bool CFlamingoClient::InitNetThreads()
 ```
 有个疑问, 在Init之前先设置了RecvMsgThread, 为什么呢? 暂且先不管, 一会儿再看.
 
-大概过一下CFlamingoClient的定义, 可以看到这是一个单例类, 并且从名字可以推测这是封装客户端逻辑操作的(因为UI逻辑封装在了CMainDlg中), 算作业务逻辑层, 里面有四个线程:
+大概过一下CFlamingoClient的定义, 可以看到这是一个单例类, 并且从名字可以推测这是封装客户端逻辑操作的(因为UI逻辑封装在了CMainDlg中), 那么CFlamingoClient暂且算作业务逻辑层, 他里面有四个线程对象:
 1. CSendMsgThread m_SendMsgThread
 2. CRecvMsgThread m_RecvMsgThread
 3. CFileTaskThread m_FileTask
 4. CImageTaskThread m_ImageTask
+这四个线程对象继承自同一个父类CThread, CThread的声明定义很短, 直接展开来看一下:
+```
+class CThread
+{
+public:
+    CThread(){};
+    virtual ~CThread(){};
+    CThread(const CThread& rhs) = delete;
+    CThread& operator=(const CThread& rhs) = delete;
+    void Start()
+    {
+        if (!m_spThread)
+            m_spThread.reset(new std::thread(std::bind(&CThread::ThreadProc, this)));
+    }
+    virtual void Stop() = 0;
+    void Join()
+    {
+        if (m_spThread && m_spThread->joinable())
+            m_spThread->join();
+    }
+protected:
+    virtual void Run() = 0;
+private:
+    void ThreadProc()
+    {
+        Run();
+    }
+protected:
+    bool                            m_bStop{ false };
+private:
+    std::shared_ptr<std::thread>    m_spThread;
+};
+```
+CThread使用很简单: 子类实现Run()和Stop(), 其中Run()是线程函数, 线程退出时需要做的一些清理操作放在Stop()中. 通过实例对象的Start()方法启动线程, std::bind将CThread的成员函数ThreadProc()和隐含参数this绑定并将绑定后的函数作为线程函数作为std::thread构造函数的参数并实例化(new)一个std::thread对象, 这个对象保存在只能指针m_spThread中. 线程启停的大致逻辑清楚了, 接来下具体看下这四个线程函数逻辑. 
 
+```
+void CSendMsgThread::Run()
+{
+    while (!m_bStop)
+    {
+        CNetData* lpMsg;        //指向CNetData的指针变量, CNetData是客户端所有协议包的父类.
+        {
+            std::unique_lock<std::mutex> guard(m_mtItems);
+            while (m_listItems.empty())
+            {
+                if (m_bStop)
+                    return;
+                m_cvItems.wait(guard);      //阻塞在条件变量上
+            }
+            lpMsg = m_listItems.front();    //拿到协议包
+            m_listItems.pop_front();        //消费
+        }   //guard出作用域, 析构解锁.
+        HandleItem(lpMsg);                  //根据协议包的类型(m_uType)进行处理, 注意这里已经不是互斥区了.
+    }
+}
+```
+HandleItem在函数内外都没有加锁保护, 所以是非线程安全的, 事实上只有线程函数中调用了他. 这个函数的作用是根据协议包的类型将其用BinaryWriteStream序列化到一个string中, 再由CIUSocket::Send(const std::string& strBuffer)负责发送出去. 
 
 CIUSocket 作为网络通信层, 其中有两个线程:
 1. m_spSendThread 数据发送线程, 线程函数 CIUSocket::SendThreadProc
@@ -367,3 +423,4 @@ bool CIUSocket::DecodePackages()    //解包,
  1. 网络数据发送线程: m_spSendThread, 线程函数是CIUSocket::SendThreadProc, 职责是将其他模块或线程投递过来的数据正确进行发送. m_spSendThread是m_cvSendBuf唯一的消费者, m_spRecvThread 和 m_SendMsgThread 是m_cvSendBuf唯二的生产者, 二者调用同一个投送数据的接口, 数据投送完毕后通过条件变量通知m_spSendThread. m_spRecvThread 投送的是心跳包, m_SendMsgThread投送的是经由HandleItem(CNetData* pNetData)工厂生产包装后的协议数据.
  2. 网络数据接收线程: m_spRecvThread, 线程函数是CIUSocket::RecvThreadProc, 职责是按包(协议)确定数据边界, 读取socket接收的数据并进行解包, 最后将包体数据经由CRecvMsgThread::AddMsgData(const std::string& pMsgData)投送到 m_pRecvMsgThread 线程并通过条件变量通知m_pRecvMsgThread进行消费. 
 再谈一下这块儿的设计, CUISocket作为一个单例类可以在全局使用, 数据发送线程m_spSendThread 和 数据接收线程m_spRecvThread 同属CIUSocket类, 在这一层保证网络数据的正确发送与接收: 将其他模块投送过来的协议包进行压缩并发送, 将socket收到的网络数据进行解压并转成协议包.
+
