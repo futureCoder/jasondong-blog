@@ -7,28 +7,8 @@ categories:
 - 分类
 - 技术文章
 ---
+启动项选为Flamingo, F10单步调试启动, 程序从_tWinMain开始启动, 一步步跟下来, 发现程序在Startup.cpp::run()中的dlgMain.Create阻塞住了, 选择全部中断之后只筛出一个用户线程, 发现其实是阻塞在了CLoginDlg::DoModal()中, 并且堆栈信息显示确实是从Startup.cpp::run()调用过来的. 而DoModal再往下跟就是系统封好的东西了对于分析客户端流程也没啥意义. 那就从最后一个有意义的实例类CLoginDlg看起. 单单从表现上看, 这时应该客户端只做了一些微小的初始化工作, 然后显示出登录界面, 那么这时如果往下走的话唯一应该关心的东西应该就是点击登录按钮后执行的逻辑. 查看CLoginDlg定义, 很容易找到其中定义了一个消息处理回调```OnBtn_Login```, 这个函数逻辑是先在客户端做合法性检查. 把用户名密码保存到成员变量, 再开启一个线程```LoginThreadProc```并把自身实例作为参数传给线程, 
 
-
-CFlamingoClient持有
-
-
-CIUSocket
-CIUSocket::Init()
-
-CIUSocket::Connect()
-
-CSendMsgThread::Run()
-
-CRecvMsgThread::Run()
-
-CFileTaskThread::Run()
-
-CImageTaskThread::Run()
-
-CIUSocket::CheckReceivedData()
-
-_tWinMain
-atlapp.h::1271
 
 ```
 bool CIUSocket::Connect(int timeout /*= 3*/)
@@ -91,13 +71,13 @@ bool CIUSocket::Connect(int timeout /*= 3*/)
 ```
 CIUSocket::Connect只做一件事就是连接chatserver, 上来先创建socket并将其设置为非阻塞模式, 禁用Nagle算法并设置收/发超时时间为3s, 
 
-主线程中 CMainDlg::OnLoginResult() 初始化CFlamingoClient中所有的网络线程InitNetThreads(), 之后调用CFlamingoClient::GetFriendList()向消息发送线程m_SendMsgThread加入一条待发送数据, ~~并开启CCheckNetworkStatusTask线程, CCheckNetworkStatusTask在线程函数中每3秒检测一次网络状态并将状态由FMG_MSG_NETWORK_STATUS_CHANGE事件抛出, ~~
+主线程中 CMainDlg::OnLoginResult() 初始化CFlamingoClient中所有的网络线程InitNetThreads(), 之后调用CFlamingoClient::GetFriendList()向消息发送线程m_SendMsgThread加入一条待发送数据. 
 
-看一下网络线程的初始化部分
+看一下线程初始化部分, 即CFlamingoClient::InitNetThreads:
 ```
 bool CFlamingoClient::InitNetThreads()
 {
-    CIUSocket::GetInstance().SetRecvMsgThread(&m_RecvMsgThread);    //
+    CIUSocket::GetInstance().SetRecvMsgThread(&m_RecvMsgThread);    //有个疑问, 在Init之前先设置了RecvMsgThread, 为什么呢? 暂且先不管, 一会儿再看.
     CIUSocket::GetInstance().Init();
 
     m_SendMsgThread.Start();
@@ -113,7 +93,6 @@ bool CFlamingoClient::InitNetThreads()
     return true;
 }
 ```
-有个疑问, 在Init之前先设置了RecvMsgThread, 为什么呢? 暂且先不管, 一会儿再看.
 
 大概过一下CFlamingoClient的定义, 可以看到这是一个单例类, 并且从名字可以推测这是封装客户端逻辑操作的(因为UI逻辑封装在了CMainDlg中), 那么CFlamingoClient暂且算作业务逻辑层, 他里面有四个线程对象:
 1. CSendMsgThread m_SendMsgThread
@@ -176,7 +155,15 @@ void CSendMsgThread::Run()
     }
 }
 ```
-HandleItem在函数内外都没有加锁保护, 所以是非线程安全的, 事实上只有线程函数中调用了他. 这个函数的作用是根据协议包的类型将其用BinaryWriteStream序列化到一个string中, 再由CIUSocket::Send(const std::string& strBuffer)负责发送出去. 
+HandleItem在函数内外都没有加锁保护, 所以是非线程安全的. 不过实际上只有线程函数中调用了他. 这个函数逻辑如下:
+1. 根据协议包的类型执行具体的协议包处理逻辑;
+2. 在具体的协议包处理逻辑中, 将协议包用BinaryWriteStream序列化到一个string中;
+3. 由CIUSocket::Send(const std::string& strBuffer)负责将序列化后的string发送出去;
+4. 包序列号自增;
+5. 析构协议包.
+
+
+
 
 CIUSocket 作为网络通信层, 其中有两个线程:
 1. m_spSendThread 数据发送线程, 线程函数 CIUSocket::SendThreadProc
